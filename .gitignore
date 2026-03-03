@@ -1,6 +1,13 @@
+# model weights / checkpoints
+saved_models/
+*.pth
+*.pt
+*.ckpt
+
+# dataset (建议不要上传)
+caltech-101/
+
+# caches
 __pycache__/
-*.pyc
-results/
-plots/
-checkpoints/
 .DS_Store
+.vscode/
