@@ -11,3 +11,14 @@ caltech-101/
 __pycache__/
 .DS_Store
 .vscode/
+
+# --- allow results & plots artifacts ---
+!results/
+!results/**/*.json
+
+!plots/
+!plots/**/*.png
+!plots/**/*.pdf
+
+# (optional) if you also save svg
+!plots/**/*.svg
