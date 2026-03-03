@@ -19,9 +19,6 @@ SEED = 42
 
 
 def get_splits(num_samples: int, targets: list) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    跟 deep_experiments 里一样：70/15/15 stratified split
-    """
     indices = np.arange(num_samples)
     train_idx, temp_idx = train_test_split(
         indices,
@@ -40,9 +37,6 @@ def get_splits(num_samples: int, targets: list) -> Tuple[np.ndarray, np.ndarray,
 
 
 def extract_hog_features(dataset: ImageFolder, indices: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    从 ImageFolder 某些样本中提取 HOG 特征。
-    """
     X, y = [], []
     for i in indices:
         path, label = dataset.samples[i]
@@ -50,7 +44,6 @@ def extract_hog_features(dataset: ImageFolder, indices: np.ndarray) -> Tuple[np.
         img = img.resize((IMG_SIZE, IMG_SIZE))
         gray = rgb2gray(np.array(img))
 
-        # HOG 特征（参数可以调，这里给一个常见配置）
         feat = hog(
             gray,
             pixels_per_cell=(8, 8),
@@ -67,7 +60,7 @@ def extract_hog_features(dataset: ImageFolder, indices: np.ndarray) -> Tuple[np.
 
 
 def run_hog_svm() -> Dict:
-    dataset = ImageFolder(DATA_DIR)  # 不用 transforms，这里自己处理
+    dataset = ImageFolder(DATA_DIR) 
     num_samples = len(dataset.samples)
     targets = [s[1] for s in dataset.samples]
 
@@ -83,16 +76,13 @@ def run_hog_svm() -> Dict:
 
     print(f"Feature dim: {X_train.shape[1]}")
 
-    # 这里用 LinearSVC，速度比 RBF SVC 好很多
     clf = LinearSVC(random_state=SEED, max_iter=5000)
     clf.fit(X_train, y_train)
 
-    # 在验证集上看一下
     val_pred = clf.predict(X_val)
     val_acc = accuracy_score(y_val, val_pred)
     print(f"Val Accuracy (HOG + LinearSVC): {val_acc * 100:.2f}%")
 
-    # 最终在测试集上评估
     test_pred = clf.predict(X_test)
     test_acc = accuracy_score(y_test, test_pred)
     report_dict = classification_report(

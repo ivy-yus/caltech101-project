@@ -43,27 +43,22 @@ def get_dataloaders(
     batch_size: int = BATCH_SIZE,
     augment: bool = True,
 ) -> Tuple[DataLoader, DataLoader, DataLoader, int]:
-    """
-    返回 train/val/test dataloader，支持指定输入分辨率和是否使用数据增强。
-    这里的增强版本稍微强一点：RandomResizedCrop + Flip + ColorJitter + RandomErasing。
-    """
+
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225],
     )
 
     if augment:
-        # 更强一点的训练增强
+
         train_transform = transforms.Compose(
             [
-                # 随机裁剪 + 缩放到 img_size x img_size
                 transforms.RandomResizedCrop(
                     img_size,
                     scale=(0.8, 1.0),
                     ratio=(0.75, 1.33),
                 ),
                 transforms.RandomHorizontalFlip(),
-                # 轻量颜色扰动
                 transforms.ColorJitter(
                     brightness=0.2,
                     contrast=0.2,
@@ -71,12 +66,10 @@ def get_dataloaders(
                 ),
                 transforms.ToTensor(),
                 normalize,
-                # 在 tensor 上随机抹掉一小块
                 transforms.RandomErasing(p=0.25),
             ]
         )
     else:
-        # 不做增强的情况：只做 resize + normalize
         train_transform = transforms.Compose(
             [
                 transforms.Resize((img_size, img_size)),
@@ -85,7 +78,6 @@ def get_dataloaders(
             ]
         )
 
-    # 验证 / 测试：严格不做随机增强
     eval_transform = transforms.Compose(
         [
             transforms.Resize((img_size, img_size)),
@@ -141,10 +133,7 @@ def get_dataloaders(
 # Model factory
 # ------------------
 def build_model(arch: str, num_classes: int, freeze_backbone: bool = True) -> nn.Module:
-    """
-    根据 arch 创建 ResNet / EfficientNet / ViT，并替换最后一层。
-    arch: "resnet50", "resnet18", "efficientnet_b0", "vit_b_16"
-    """
+
     if arch == "resnet50":
         model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
         in_features = model.fc.in_features
@@ -168,7 +157,6 @@ def build_model(arch: str, num_classes: int, freeze_backbone: bool = True) -> nn
     else:
         raise ValueError(f"Unknown architecture: {arch}")
 
-    # 默认所有参数都是可训练的；如果需要冻结，再改 requires_grad
     if freeze_backbone:
         for p in model.parameters():
             p.requires_grad = False
@@ -197,9 +185,6 @@ def train_one_model(
     weight_decay: float = 0.0,
     label_smoothing: float = 0.0,
 ) -> Dict:
-    """
-    训练指定 arch 的模型，返回 test metrics 字典，并把结果存到 json。
-    """
     set_seed(SEED)
     device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
     print(f"Running {exp_name} on device: {device}")
@@ -213,7 +198,6 @@ def train_one_model(
 
     model = build_model(arch, num_classes, freeze_backbone=freeze_backbone).to(device)
 
-    # 只优化需要梯度的参数
     params_to_optimize = [p for p in model.parameters() if p.requires_grad]
     criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
     optimizer = optim.Adam(params_to_optimize, lr=LR, weight_decay=weight_decay)
@@ -376,7 +360,7 @@ if __name__ == "__main__":
         train_one_model("efficientnet_b0", img_size=128, augment=True, exp_name="effnet_b0_main")
 
     elif args.exp == "vit_b16_main":
-        # baseline: 冻结 backbone, 有 augmentation
+        # baseline: frozen backbone + augmentation
         train_one_model(
             "vit_b_16",
             img_size=224,
@@ -386,7 +370,7 @@ if __name__ == "__main__":
         )
 
     elif args.exp == "vit_b16_noaug":
-        # Ablation A: 去掉 augmentation
+        # Ablation A: no augmentation
         train_one_model(
             "vit_b_16",
             img_size=224,
@@ -396,7 +380,7 @@ if __name__ == "__main__":
         )
 
     elif args.exp == "vit_b16_ft_all":
-        # Ablation B: full fine-tuning（不冻结 backbone）
+        # Ablation B: full fine-tuning
         train_one_model(
             "vit_b_16",
             img_size=224,
@@ -408,7 +392,7 @@ if __name__ == "__main__":
         train_one_model(
             "vit_b_16",
             img_size=224,
-            augment=True,              # 现在代表“强增强”
+            augment=True,
             exp_name="vit_b16_strongaug_ft_all",
             freeze_backbone=False,     # full fine-tune
         )
@@ -417,7 +401,7 @@ if __name__ == "__main__":
         train_one_model(
             "vit_b_16",
             img_size=224,
-            augment=True,              # 用和 vit_b16_ft_all 一样的 weak aug
+            augment=True,
             exp_name="vit_b16_ft_all_reg",
             freeze_backbone=False,     # full fine-tune
             weight_decay=1e-4,
